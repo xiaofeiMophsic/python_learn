@@ -11,6 +11,7 @@ def open_xls(file="a.xlsx"):
     except Exception as e:
         print("读取文件发生错误:{0}".format(e))
 
+
 #根据索引获取表格中的数据
 def excel_table_by_index(file="a.xlsx", column_index = 1, by_index = 0):
     data = open_xls(file)

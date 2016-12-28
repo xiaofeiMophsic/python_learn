@@ -2,6 +2,7 @@
 
 import xlwt
 import json
+import operator
 
 
 def is_txt(str = ""):
@@ -16,6 +17,10 @@ def is_download(dict):
     return False
 
 
+def get_list(str):
+    return str.get('name', '').split('_')
+
+
 def read_jpg_download_data():
     """
     获取jpg下载数据列表
@@ -25,6 +30,11 @@ def read_jpg_download_data():
         item = items[i]
         if (not is_txt(item['name'])) and is_download(item):
             list.append(item)
+    # 文件名称格式如：0_50_24K_jpg，对列表中的数据先按压缩比排序，压缩比一定的情况下按文件数量排序，前两个一定的情况下按文件大小排序
+    # list.sort(key=lambda key: (int(key.get('name', '').split('_')[0])))
+    list.sort(key=lambda key: (int(get_list(key)[0]),
+                               int(get_list(key)[1]),
+                               int(get_list(key)[2][0:len(get_list(key)[2])-1])))
     return list
 
 
@@ -37,6 +47,9 @@ def read_jpg_uncompress_data():
         item = items[i]
         if (not is_txt(item['name'])) and (not is_download(item)):
             list.append(item)
+    list.sort(key=lambda key: (int(get_list(key)[0]),
+                               int(get_list(key)[1]),
+                               int(get_list(key)[2][0:len(get_list(key)[2])-1])))
     return list
 
 
@@ -49,6 +62,9 @@ def read_txt_download_data():
         item = items[i]
         if is_txt(item['name']) and is_download(item):
             list.append(item)
+    list.sort(key=lambda key: (int(get_list(key)[0]),
+                               int(get_list(key)[1]),
+                               int(get_list(key)[2][0:len(get_list(key)[2])-1])))
     return list
 
 
@@ -61,6 +77,9 @@ def read_txt_uncompress_data():
         item = items[i]
         if is_txt(item['name']) and (not is_download(item)):
             list.append(item)
+    list.sort(key=lambda key: (int(get_list(key)[0]),
+                               int(get_list(key)[1]),
+                               int(get_list(key)[2][0:len(get_list(key)[2])-1])))
     return list
 
 
@@ -108,9 +127,9 @@ def gen_excel_table():
     sheet1 = f.add_sheet(u'jpg下载解压速度测试', cell_overwrite_ok=True)
     jpg_title = u'jpg下载解压速度统计（单位：ms）'
 
-    row0 = [u'序号', u'名称', u'压缩级别', u'下载耗时', u'解压耗时', u'累计耗时']
+    row0 = [u'序号', u'名称', u'压缩级别', u'文件数量', u'下载耗时', u'解压耗时', u'累计耗时']
     # 生成标题，合并第一行6列
-    sheet1.write_merge(0, 0, 0, 5, jpg_title)
+    sheet1.write_merge(0, 0, 0, 6, jpg_title)
     # 生成第一行
     for i in range(0, len(row0)):
         sheet1.write(1, i, row0[i])
@@ -121,23 +140,25 @@ def gen_excel_table():
 
     for i in range(0, len(jpg_down_list)):
 
-        name = jpg_down_list[i]['name']
+        name = str(jpg_down_list[i]['name'])
         download_cost = jpg_down_list[i]['download']
         uncomp_cost = get_uncomp_cost_by_name(jpg_uncomp_list, name)
+        count = name.split('_')[1]
 
         sheet1.write(i + 2, 0, i + 1)                          # 序号
         sheet1.write(i + 2, 1, name)                                # 名称
         sheet1.write(i + 2, 2, name[0:1])                     # 压缩级别
-        sheet1.write(i + 2, 3, download_cost)                  # 下载耗时
-        sheet1.write(i + 2, 4, uncomp_cost)                    # 解压耗时
-        sheet1.write(i + 2, 5, download_cost + uncomp_cost)    # 总耗时
+        sheet1.write(i + 2, 3, count)                       # 文件数量
+        sheet1.write(i + 2, 4, download_cost)                  # 下载耗时
+        sheet1.write(i + 2, 5, uncomp_cost)                    # 解压耗时
+        sheet1.write(i + 2, 6, download_cost + uncomp_cost)    # 总耗时
 
     # 添加txt sheet
     sheet2 = f.add_sheet(u'txt下载解压速度测试', cell_overwrite_ok=True)
     jpg_title = u'txt下载解压速度统计（单位：ms）'
 
     # 生成标题，合并第一行6列
-    sheet2.write_merge(0, 0, 0, 5, jpg_title)
+    sheet2.write_merge(0, 0, 0, 6, jpg_title)
     # 生成第一行
     for i in range(0, len(row0)):
         sheet2.write(1, i, row0[i])
@@ -150,13 +171,15 @@ def gen_excel_table():
         name = txt_down_list[i]['name']
         download_cost = txt_down_list[i]['download']
         uncomp_cost = get_uncomp_cost_by_name(txt_uncomp_list, name)
+        count = name.split('_')[1]
 
         sheet2.write(i + 2, 0, i + 1)                      # 序号
         sheet2.write(i + 2, 1, name)                            # 名称
         sheet2.write(i + 2, 2, name[0:1])                      # 压缩级别
-        sheet2.write(i + 2, 3, download_cost)              # 下载耗时
-        sheet2.write(i + 2, 4, uncomp_cost)                # 解压耗时
-        sheet2.write(i + 2, 5, download_cost + uncomp_cost)  # 总耗时
+        sheet2.write(i + 2, 3, count)  # 文件数量
+        sheet2.write(i + 2, 4, download_cost)              # 下载耗时
+        sheet2.write(i + 2, 5, uncomp_cost)                # 解压耗时
+        sheet2.write(i + 2, 6, download_cost + uncomp_cost)  # 总耗时
 
     file_name = '压缩包性能测试.xls'
     f.save(file_name)  # 保存文件
